@@ -49,10 +49,10 @@ async function getNextImage(tenantId: string, category?: string) {
       ))
       .orderBy(asc(marketingImages.usageCount), asc(marketingImages.lastUsedAt))
       .limit(1);
-    
+
     if (categoryImages[0]) return categoryImages[0];
   }
-  
+
   // Fallback to any active image (but NOT before-after unless specifically requested)
   const images = await db
     .select()
@@ -63,7 +63,7 @@ async function getNextImage(tenantId: string, category?: string) {
     ))
     .orderBy(asc(marketingImages.usageCount), asc(marketingImages.lastUsedAt))
     .limit(1);
-  
+
   return images[0] || null;
 }
 
@@ -74,7 +74,7 @@ async function getNextMessage() {
     .where(eq(marketingPosts.isActive, true))
     .orderBy(asc(marketingPosts.usageCount), asc(marketingPosts.lastUsedAt))
     .limit(1);
-  
+
   return messages[0] || null;
 }
 
@@ -138,7 +138,7 @@ async function postToFacebook(
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       console.log(`[FB Post] Error response:`, JSON.stringify(data));
       return { success: false, error: data.error?.message || 'Post failed' };
@@ -221,7 +221,7 @@ async function postToInstagram(
 
 async function checkAndExecuteScheduledPosts(): Promise<void> {
   const { hour, minute, dayOfWeek } = getCurrentCSTTime();
-  
+
   try {
     // Get ALL schedules for today that haven't been executed yet
     // This allows catching up on missed posts from earlier in the day
@@ -237,11 +237,11 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
     // Filter to schedules that are due (hour has passed) and not yet executed today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const dueSchedules = allTodaySchedules.filter(schedule => {
       // Only consider schedules where the hour has passed
       if (schedule.hourOfDay > hour) return false;
-      
+
       // Check if already executed today
       if (schedule.lastExecutedAt) {
         const lastExec = new Date(schedule.lastExecutedAt);
@@ -253,7 +253,7 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
     });
 
     if (dueSchedules.length === 0) return;
-    
+
     console.log(`[NPP Posting] Found ${dueSchedules.length} due/missed posts to execute`);
 
     for (const schedule of dueSchedules) {
@@ -273,13 +273,13 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
       }
 
       const messageContent = await getNextMessage();
-      
+
       // CRITICAL: Match image category to message category
       // Especially important for "Before & After" posts - must show actual before/after images
       let imageCategory: string | undefined;
-      const isBeforeAfterMessage = messageContent?.content?.toLowerCase().includes('before') && 
-                                    messageContent?.content?.toLowerCase().includes('after');
-      
+      const isBeforeAfterMessage = messageContent?.content?.toLowerCase().includes('before') &&
+        messageContent?.content?.toLowerCase().includes('after');
+
       if (messageContent?.content) {
         const content = messageContent.content.toLowerCase();
         if (isBeforeAfterMessage) {
@@ -297,31 +297,29 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
           imageCategory = 'commercial';
         }
       }
-      
+
       const image = await getNextImage(schedule.tenantId, imageCategory);
-      
+
       if (!image && !messageContent) {
         console.log(`[NPP Posting] No content available for ${schedule.tenantId}`);
         continue;
       }
-      
+
       // VALIDATION: If message mentions before/after but no matching before_after image available, skip this post
       // Check both naming conventions (before-after and before_after)
-      const imageIsBeforeAfter = image?.category === 'before_after' || 
-                                  image?.category === 'before-after' ||
-                                  image?.filename?.toLowerCase().includes('before');
-      
+      const imageIsBeforeAfter = image?.category === 'before_after' ||
+        image?.category === 'before-after' ||
+        image?.filename?.toLowerCase().includes('before');
+
       if (isBeforeAfterMessage && !imageIsBeforeAfter) {
         console.log(`[NPP Posting] SKIPPING: Before/After message but no before/after image available (got category: ${image?.category}). This prevents misleading posts.`);
         continue;
       }
 
       const message = messageContent?.content || 'Quality painting services from Nash PaintPros! Call 615-555-PAINT for your free estimate.';
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-        : 'https://paintpros.io';
+      const baseUrl = `https://${process.env.APP_DOMAIN || 'paintpros.io'}`;
       const imageUrl = image ? `${baseUrl}${image.filePath}` : undefined;
-      
+
       console.log(`[NPP Posting] Using image: ${image?.filename || 'none'}, message: ${messageContent?.id || 'default'}`);
       console.log(`[NPP Posting] Image URL: ${imageUrl}`);
 
@@ -411,7 +409,7 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
             })
             .where(eq(marketingImages.id, image.id));
         }
-        
+
         // Update message usage tracking
         if (messageContent) {
           await db
@@ -444,9 +442,9 @@ export function startNppPostingScheduler(): void {
   console.log('[NPP Posting Scheduler] Weekdays (Mon-Fri): 5 posts at 6am,10am,2pm,6pm,10pm CST');
   console.log('[NPP Posting Scheduler] Weekends (Sat-Sun): 3 posts at 8am,2pm,8pm CST');
   isRunning = true;
-  
+
   checkAndExecuteScheduledPosts();
-  
+
   postingInterval = setInterval(checkAndExecuteScheduledPosts, CHECK_INTERVAL_MS);
 }
 
@@ -466,12 +464,12 @@ export async function triggerManualPost(tenantId: string): Promise<{ facebook?: 
   }
 
   const messageContent = await getNextMessage();
-  
+
   // CRITICAL: Match image category to message category
   let imageCategory: string | undefined;
-  const isBeforeAfterMessage = messageContent?.content?.toLowerCase().includes('before') && 
-                                messageContent?.content?.toLowerCase().includes('after');
-  
+  const isBeforeAfterMessage = messageContent?.content?.toLowerCase().includes('before') &&
+    messageContent?.content?.toLowerCase().includes('after');
+
   if (messageContent?.content) {
     const content = messageContent.content.toLowerCase();
     if (isBeforeAfterMessage) {
@@ -488,27 +486,25 @@ export async function triggerManualPost(tenantId: string): Promise<{ facebook?: 
       imageCategory = 'commercial';
     }
   }
-  
+
   const image = await getNextImage(tenantId, imageCategory);
-  
+
   if (!image && !messageContent) {
     throw new Error('No content available');
   }
-  
+
   // VALIDATION: If message mentions before/after but no matching before_after image available, throw error
-  const imageIsBeforeAfter = image?.category === 'before_after' || 
-                              image?.category === 'before-after' ||
-                              image?.filename?.toLowerCase().includes('before');
-  
+  const imageIsBeforeAfter = image?.category === 'before_after' ||
+    image?.category === 'before-after' ||
+    image?.filename?.toLowerCase().includes('before');
+
   if (isBeforeAfterMessage && !imageIsBeforeAfter) {
     throw new Error('Before/After message requires a before-after image. Please upload proper before/after comparison images first.');
   }
 
   const results: { facebook?: any; instagram?: any } = {};
   const message = messageContent?.content || 'Quality painting services from Nash PaintPros!';
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : 'https://paintpros.io';
+  const baseUrl = `https://${process.env.APP_DOMAIN || 'paintpros.io'}`;
   const imageUrl = image ? `${baseUrl}${image.filePath}` : undefined;
 
   if (integration.facebookPageId) {
@@ -554,7 +550,7 @@ export async function triggerManualPost(tenantId: string): Promise<{ facebook?: 
         })
         .where(eq(marketingImages.id, image.id));
     }
-    
+
     // Update message usage tracking
     if (messageContent) {
       await db

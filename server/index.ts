@@ -32,10 +32,10 @@ async function autoSeedDefaultPins(): Promise<void> {
     return;
   }
   pinsSeeded = true;
-  
+
   try {
     console.log("[PIN Seeder] Checking and seeding default PINs...");
-    
+
     const defaultPins = [
       { role: "ops_manager", pin: "4444", mustChangePin: true },  // Admin - Sidonie
       { role: "owner", pin: "1111", mustChangePin: true },        // Owner - Ryan
@@ -45,7 +45,7 @@ async function autoSeedDefaultPins(): Promise<void> {
       { role: "demo_viewer", pin: "7777", mustChangePin: false },
       { role: "marketing", pin: "8888", mustChangePin: true }    // Marketing Partner - Logan
     ];
-    
+
     let seededCount = 0;
     for (const pinData of defaultPins) {
       const existing = await storage.getUserPinByRole(pinData.role);
@@ -55,7 +55,7 @@ async function autoSeedDefaultPins(): Promise<void> {
         console.log(`[PIN Seeder] Created PIN for role: ${pinData.role}`);
       }
     }
-    
+
     if (seededCount > 0) {
       console.log(`[PIN Seeder] Seeded ${seededCount} new PINs`);
     } else {
@@ -83,47 +83,47 @@ async function autoDeployVersionBump(): Promise<void> {
     console.log("[auto-deploy] Already processed this deployment");
     return;
   }
-  
-  const deploymentId = process.env.REPLIT_DEPLOYMENT_ID;
+
+  const deploymentId = process.env.DEPLOYMENT_ID || process.env.RENDER_SERVICE_ID;
   const isProduction = process.env.NODE_ENV === "production";
-  
+
   if (!isProduction) {
     console.log("[auto-deploy] Skipping - not in production mode");
     return;
   }
-  
+
   console.log("[auto-deploy] Production detected, starting automatic version bump for all tenants...");
-  
+
   const privateKey = process.env.PHANTOM_SECRET_KEY || process.env.SOLANA_PRIVATE_KEY;
   const wallet = privateKey ? solana.getWalletFromPrivateKey(privateKey) : null;
   const network: 'devnet' | 'mainnet-beta' = 'mainnet-beta';
-  
+
   // Process each tenant independently
   for (const tenant of DEPLOY_TENANTS) {
     try {
       console.log(`[auto-deploy][${tenant.id}] Processing ${tenant.name}...`);
-      
+
       // Get tenant-specific latest release
       const latestRelease = await storage.getLatestRelease(tenant.id);
-      
+
       // Check if this deployment ID was already processed for this tenant
       if (deploymentId && latestRelease?.deploymentId === deploymentId) {
         console.log(`[auto-deploy][${tenant.id}] Deployment already processed, skipping`);
         continue;
       }
-      
+
       // Calculate new version for this tenant
       let currentVersion = latestRelease?.version || "1.0.0";
       let buildNumber = (latestRelease?.buildNumber || 0) + 1;
-      
+
       const [major, minor, patch] = currentVersion.split('.').map(Number);
       const newVersion = `${major}.${minor}.${patch + 1}`;
-      
+
       console.log(`[auto-deploy][${tenant.id}] Bumping: ${currentVersion} -> ${newVersion} (Build ${buildNumber})`);
-      
+
       // Create tenant-specific content hash
       const contentHash = solana.hashData(`${tenant.id}-${newVersion}-${buildNumber}-${Date.now()}-${deploymentId || 'manual'}`);
-      
+
       // Create hallmark for this tenant's release
       const hallmarkData = hallmarkService.createHallmarkData(
         'release',
@@ -131,9 +131,9 @@ async function autoDeployVersionBump(): Promise<void> {
         'system',
         'system',
         `v${newVersion} build ${buildNumber}`,
-        { 
-          version: newVersion, 
-          buildNumber, 
+        {
+          version: newVersion,
+          buildNumber,
           bumpType: 'patch',
           tenantId: tenant.id,
           deploymentId: deploymentId || 'manual',
@@ -144,10 +144,10 @@ async function autoDeployVersionBump(): Promise<void> {
         undefined,
         tenant.id // Use tenant ID for proper prefix (NPP-, PP-, ORBIT-)
       );
-      
+
       const savedHallmark = await storage.createHallmark(hallmarkData);
       console.log(`[auto-deploy][${tenant.id}] Created hallmark: ${savedHallmark.hallmarkNumber}`);
-      
+
       // Create tenant-specific release record
       const release = await storage.createRelease({
         tenantId: tenant.id,
@@ -159,12 +159,12 @@ async function autoDeployVersionBump(): Promise<void> {
         releaseNotes: `Automatic deployment ${new Date().toISOString()}`,
       });
       console.log(`[auto-deploy][${tenant.id}] Created release: v${newVersion}`);
-      
+
       // Attempt Solana blockchain stamp for this tenant
       if (wallet) {
         try {
           console.log(`[auto-deploy][${tenant.id}] Stamping to Solana...`);
-          
+
           const result = await solana.stampHashToBlockchain(
             contentHash,
             wallet,
@@ -172,12 +172,12 @@ async function autoDeployVersionBump(): Promise<void> {
             { entityType: 'release', entityId: release.id },
             tenant.id // Pass tenant ID for memo prefix
           );
-          
+
           await storage.updateReleaseSolanaStatus(release.id, result.signature, "confirmed");
-          
+
           const explorerUrl = `https://explorer.solana.com/tx/${result.signature}`;
           await storage.updateHallmarkBlockchain(savedHallmark.id, result.signature, explorerUrl);
-          
+
           console.log(`[auto-deploy][${tenant.id}] SUCCESS! TX: ${result.signature}`);
         } catch (stampError) {
           console.error(`[auto-deploy][${tenant.id}] Solana stamp failed:`, stampError);
@@ -185,15 +185,15 @@ async function autoDeployVersionBump(): Promise<void> {
       } else {
         console.log(`[auto-deploy][${tenant.id}] No wallet - version bumped without blockchain stamp`);
       }
-      
+
       console.log(`[auto-deploy][${tenant.id}] COMPLETE: v${newVersion} (Build ${buildNumber})`);
-      
+
     } catch (error) {
       console.error(`[auto-deploy][${tenant.id}] Error:`, error);
       // Continue with other tenants even if one fails
     }
   }
-  
+
   autoDeployProcessed = true;
   console.log("[auto-deploy] All tenants processed successfully");
 }
@@ -298,40 +298,40 @@ app.use((req, res, next) => {
     },
     async () => {
       log(`serving on port ${port}`);
-      
+
       // Initialize OIDC auth in background (non-blocking)
       // This runs AFTER the server is listening to pass Cloud Run health checks
       initAuthBackground().catch(err => {
         console.error("[Auth] Background init failed (non-fatal):", err);
       });
-      
+
       // Seed default PINs if they don't exist (runs in both dev and production)
       await autoSeedDefaultPins();
-      
+
       // Run automatic version bump on production deployment
       // This happens after server is ready to ensure database connection is established
       await autoDeployVersionBump();
-      
+
       // Social media auto-posting (Twitter/X, Discord, Telegram)
       startScheduler();
-      
+
       // Start the blog scheduler for automated AI blog generation
       startBlogScheduler();
-      
+
       // NPP Meta Ad Campaign scheduler - DISABLED per owner request
       // startAdScheduler();
-      
+
       // NPP organic posting scheduler - DISABLED per owner request
       // startNppPostingScheduler();
-      
+
       // Start DarkWave Unified Ecosystem Scheduler (all businesses through DarkWave)
       startDarkWaveUnifiedScheduler();
-      
+
       // Register PaintPros with Orbit Ecosystem Hub (non-blocking)
       orbitEcosystem.initializeEcosystem().catch(err => {
         console.error("[Orbit] Ecosystem init failed (non-fatal):", err);
       });
-      
+
       // Initialize Trust Layer Genesis Hallmark PP-00000001 (non-blocking)
       import("./hallmarkService").then(({ ensureGenesisHallmark }) => {
         ensureGenesisHallmark().catch(err => {

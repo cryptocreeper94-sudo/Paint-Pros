@@ -12,7 +12,7 @@ const ECOSYSTEM_TENANTS = [
   'darkwave',
   'dwtl',
   'pulse',
-  'tlid', 
+  'tlid',
   'tradeworksai',
   'paintpros',
   'tldriverconnect',
@@ -102,7 +102,7 @@ async function getNextImageForTenant(tenantId: string) {
     ))
     .orderBy(asc(marketingImages.usageCount), asc(marketingImages.lastUsedAt))
     .limit(1);
-  
+
   return images[0] || null;
 }
 
@@ -116,7 +116,7 @@ async function getNextPostForTenant(tenantId: string) {
     ))
     .orderBy(asc(marketingPosts.usageCount), asc(marketingPosts.lastUsedAt))
     .limit(1);
-  
+
   return posts[0] || null;
 }
 
@@ -236,7 +236,7 @@ const executedSlots: Map<string, Set<string>> = new Map();
 
 async function checkAndExecuteScheduledPosts(): Promise<void> {
   const { hour } = getCurrentCSTTime();
-  
+
   const todayKey = getTodayKey();
   if (!executedSlots.has(todayKey)) {
     executedSlots.clear();
@@ -247,9 +247,9 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
   // Check all hours up to current hour
   const dueHours = POSTING_HOURS.filter(h => h <= hour);
   const pendingSlots = dueHours.filter(h => !todayExecuted.has(`${h}`));
-  
+
   if (pendingSlots.length === 0) return;
-  
+
   console.log(`[DW Scheduler] ${pendingSlots.length} pending slot(s) to execute`);
 
   const integration = await getDarkWaveIntegration();
@@ -262,7 +262,7 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
     integration.facebookPageId!,
     integration.facebookPageAccessToken
   );
-  
+
   if (!pageToken) {
     console.log(`[DW Scheduler] Could not get page token, trying direct token...`);
   }
@@ -272,12 +272,12 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
   for (const slotHour of pendingSlots) {
     const tenantIndex = slotHour % ECOSYSTEM_TENANTS.length;
     const tenant = ECOSYSTEM_TENANTS[tenantIndex];
-    
+
     console.log(`[DW Scheduler] Slot ${slotHour}:00 CST - Posting for ${tenant}`);
-    
+
     const post = await getNextPostForTenant(tenant);
     const image = await getNextImageForTenant(tenant);
-    
+
     if (!post && !image) {
       console.log(`[DW Scheduler] No content for ${tenant}, skipping`);
       todayExecuted.add(`${slotHour}`);
@@ -288,9 +288,7 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
     const tenantUrl = TENANT_URLS[tenant] || 'https://dwsc.io/welcome';
     const baseMessage = post?.content || `Discover more about what we do`;
     const message = `${baseMessage}\n\n${tenantUrl}`;
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-      : 'https://darkwavestudios.io';
+    const baseUrl = `https://${process.env.APP_DOMAIN || 'paintpros.io'}`;
     const imageUrl = image ? `${baseUrl}${image.filePath}` : undefined;
 
     console.log(`[DW Scheduler] Content: ${post?.id || 'default'}, Image: ${image?.filename || 'none'}`);
@@ -302,10 +300,10 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
         message,
         imageUrl
       );
-      
+
       if (fbResult.success && post) {
         await db.update(marketingPosts)
-          .set({ 
+          .set({
             usageCount: sql`${marketingPosts.usageCount} + 1`,
             lastUsedAt: new Date()
           })
@@ -320,7 +318,7 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
         message,
         imageUrl
       );
-      
+
       if (image) {
         await db.update(marketingImages)
           .set({
@@ -357,7 +355,7 @@ async function checkAndExecuteScheduledPosts(): Promise<void> {
     }
 
     todayExecuted.add(`${slotHour}`);
-    
+
     await new Promise(resolve => setTimeout(resolve, 2000));
   }
 }
@@ -373,7 +371,7 @@ export function startDarkWaveUnifiedScheduler(): void {
   console.log('[DW Scheduler] Tenants:', ECOSYSTEM_TENANTS.join(', '));
   console.log('[DW Scheduler] Organic posts hourly 6am-10pm CST (17 posts/day)');
   console.log('[DW Scheduler] Each business gets ~3 posts per day (rotating)');
-  
+
   // Check X/Twitter configuration
   const twitter = new TwitterConnector();
   if (twitter.isConfigured()) {
@@ -381,7 +379,7 @@ export function startDarkWaveUnifiedScheduler(): void {
   } else {
     console.log('[DW Scheduler] X (Twitter) posting: DISABLED (missing credentials)');
   }
-  
+
   // Reset X post counter for this session
   xPostsThisSession = 0;
 

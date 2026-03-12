@@ -120,9 +120,7 @@ export const ECOSYSTEM_REGISTRY = [
 
 export async function getAffiliateLink(userId: string) {
   const uniqueHash = await ensureUniqueHash(userId);
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : "https://paintpros.tlid.io";
+  const baseUrl = `https://${process.env.APP_DOMAIN || 'paintpros.io'}`;
 
   const platforms: Record<string, string> = {};
   for (const app of ECOSYSTEM_REGISTRY) {

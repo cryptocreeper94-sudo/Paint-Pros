@@ -6,19 +6,18 @@ import { getUncachableStripeClient } from "../stripeClient";
 async function createWebhook() {
   console.log("Connecting to Stripe...");
   const stripe = await getUncachableStripeClient();
-  
+
   // Get the production domain
-  const domains = process.env.REPLIT_DOMAINS?.split(',') || [];
-  const domain = domains[0] || 'your-app.replit.app';
-  
+  const domain = process.env.APP_DOMAIN || 'paintpros.io';
+
   const webhookUrl = `https://${domain}/api/credits/webhook`;
-  
+
   console.log(`Creating webhook for: ${webhookUrl}`);
-  
+
   // Check if webhook already exists
   const existingWebhooks = await stripe.webhookEndpoints.list({ limit: 100 });
   const existing = existingWebhooks.data.find(w => w.url === webhookUrl);
-  
+
   if (existing) {
     console.log(`\nWebhook already exists: ${existing.id}`);
     console.log(`URL: ${existing.url}`);
@@ -26,7 +25,7 @@ async function createWebhook() {
     console.log(`\nTo get a new secret, delete this webhook in Stripe Dashboard and run again.`);
     return;
   }
-  
+
   // Create new webhook endpoint
   const webhook = await stripe.webhookEndpoints.create({
     url: webhookUrl,
@@ -40,7 +39,7 @@ async function createWebhook() {
     ],
     description: 'PaintPros.io Credits and Payments Webhook',
   });
-  
+
   console.log(`\n========================================`);
   console.log(`WEBHOOK CREATED SUCCESSFULLY`);
   console.log(`========================================\n`);

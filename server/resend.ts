@@ -1,39 +1,17 @@
 // Resend email integration for PaintPros.io
-// Uses Replit connector for secure API key management
+// Uses RESEND_API_KEY environment variable directly
 
 import { Resend } from 'resend';
 
-let connectionSettings: any;
-
 async function getCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
-    : null;
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'PaintPros.io <onboarding@resend.dev>';
 
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY not configured. Please set the RESEND_API_KEY environment variable.');
   }
 
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
-
-  if (!connectionSettings || (!connectionSettings.settings.api_key)) {
-    throw new Error('Resend not connected');
-  }
-  return {
-    apiKey: connectionSettings.settings.api_key, 
-    fromEmail: connectionSettings.settings.from_email
-  };
+  return { apiKey, fromEmail };
 }
 
 export async function getResendClient() {
@@ -65,10 +43,10 @@ export interface LeadNotificationData {
 export async function sendContactEmail(data: ContactFormData): Promise<{ success: boolean; error?: string }> {
   try {
     const { client, fromEmail } = await getResendClient();
-    
+
     // Use CONTACT_EMAIL env var, or fall back to NPP service email
     const recipientEmail = process.env.CONTACT_EMAIL || 'service@nashpaintpros.io';
-    
+
     const result = await client.emails.send({
       from: fromEmail || 'PaintPros.io <onboarding@resend.dev>',
       to: [recipientEmail],
@@ -116,10 +94,10 @@ export interface ContractorApplicationData {
 export async function sendContractorApplicationEmail(data: ContractorApplicationData): Promise<{ success: boolean; error?: string }> {
   try {
     const { client, fromEmail } = await getResendClient();
-    
+
     // Contractor applications go to NPP service email
     const recipientEmail = process.env.CONTRACTOR_EMAIL || 'Service@nashpaintpros.io';
-    
+
     const result = await client.emails.send({
       from: fromEmail || 'PaintPros.io <onboarding@resend.dev>',
       to: [recipientEmail],
@@ -245,16 +223,16 @@ export interface BookingNotificationData {
 export async function sendBookingNotification(data: BookingNotificationData): Promise<{ success: boolean; error?: string }> {
   try {
     const { client, fromEmail } = await getResendClient();
-    
+
     // Bookings go to NPP service email
     const recipientEmail = process.env.BOOKING_EMAIL || 'service@nashpaintpros.io';
-    const formattedDate = data.scheduledDate.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const formattedDate = data.scheduledDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
-    
+
     const result = await client.emails.send({
       from: fromEmail || 'PaintPros.io <onboarding@resend.dev>',
       to: [recipientEmail],
@@ -342,13 +320,13 @@ export async function sendBookingNotification(data: BookingNotificationData): Pr
 export async function sendLeadNotification(data: LeadNotificationData): Promise<{ success: boolean; error?: string }> {
   try {
     const { client, fromEmail } = await getResendClient();
-    
+
     // Estimates and leads go to NPP service email
     const recipientEmail = process.env.ESTIMATE_EMAIL || 'Service@nashpaintpros.io';
-    const formattedTotal = data.estimatedTotal 
-      ? `$${data.estimatedTotal.toLocaleString()}` 
+    const formattedTotal = data.estimatedTotal
+      ? `$${data.estimatedTotal.toLocaleString()}`
       : 'Not calculated';
-    
+
     const result = await client.emails.send({
       from: fromEmail || 'PaintPros.io <onboarding@resend.dev>',
       to: [recipientEmail],
