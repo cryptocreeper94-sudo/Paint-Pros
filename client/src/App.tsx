@@ -1,0 +1,362 @@
+import { Switch, Route, useLocation, Redirect } from "wouter";
+import { useEffect } from "react";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { TenantProvider } from "@/context/TenantContext";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { AccessProvider } from "@/context/AccessContext";
+import { DemoProvider } from "@/context/DemoContext";
+import { I18nProvider } from "@/lib/i18n";
+import { DemoModeBanner } from "@/components/demo-mode-banner";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { getTenantIdFromHostname } from "@/config/tenant";
+import NotFound from "@/pages/not-found";
+import Home from "@/pages/home";
+import HomeLume from "@/pages/home-lume";
+import Services from "@/pages/services";
+import Portfolio from "@/pages/portfolio";
+import About from "@/pages/about";
+import Reviews from "@/pages/reviews";
+import Estimate from "@/pages/estimate";
+import Admin from "@/pages/admin";
+import Owner from "@/pages/owner";
+import Developer from "@/pages/developer";
+import ProjectManager from "@/pages/project-manager";
+import Verify from "@/pages/verify";
+import Pay from "@/pages/pay";
+import ProposalSign from "@/pages/proposal-sign";
+import Investors from "@/pages/investors";
+import Compare from "@/pages/compare";
+import Pricing from "@/pages/pricing";
+import CrewLead from "@/pages/crew-lead";
+import ContractorApplication from "@/pages/contractor-application";
+import Blog from "@/pages/blog";
+import TermsWarranty from "@/pages/terms-warranty";
+import Account from "@/pages/account";
+import Help from "@/pages/help";
+import AuthPage from "@/pages/auth";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
+import Awards from "@/pages/awards";
+import Team from "@/pages/team";
+import ColorLibrary from "@/pages/color-library";
+import Resources from "@/pages/resources";
+import Glossary from "@/pages/glossary";
+import DemoViewer from "@/pages/demo-viewer";
+import TrialSignup from "@/pages/trial-signup";
+import TrialPortal from "@/pages/trial-portal";
+import TrialUpgrade from "@/pages/trial-upgrade";
+import TrialUpgradeSuccess from "@/pages/trial-upgrade-success";
+import EmailTemplate from "@/pages/email-template";
+import MarketingAutopilot from "@/pages/marketing-autopilot";
+import AutopilotSuccess from "@/pages/autopilot-success";
+import AutopilotAdmin from "@/pages/autopilot-admin";
+import AutopilotPortal from "@/pages/autopilot-portal";
+import AutopilotDashboard from "@/pages/autopilot-dashboard";
+import AutopilotSetupGuide from "@/pages/autopilot-setup-guide";
+import AutopilotOnboarding from "@/pages/autopilot-onboarding";
+import TrustLayerHome from "@/pages/trustlayer-home";
+import TrustLayerMarketing from "@/pages/trustlayer-marketing";
+import GuardianShield from "@/pages/guardian-shield";
+import ClaimSubdomain from "@/pages/claim-subdomain";
+import TrustLayerPrivacy from "@/pages/trustlayer-privacy";
+import TrustLayerTerms from "@/pages/trustlayer-terms";
+import PartnershipProposal from "@/pages/proposal";
+import IPAgreement from "@/pages/ip-agreement";
+import RoyaltyDashboard from "@/pages/royalty-dashboard";
+import PartnerDashboard from "@/pages/partner-dashboard";
+import ProposalRyan from "@/pages/proposal-ryan";
+import Marketing from "@/pages/marketing";
+import MarketingHub from "@/pages/marketing-hub";
+import InstallMarketingPWA from "@/pages/install-marketing-pwa";
+import MarketingOverview from "@/pages/marketing-overview";
+import OpsAI from "@/pages/ops-ai";
+import TradeWorksApp from "@/pages/tradeworks-app";
+import Why40kFails from "@/pages/why-40k-fails";
+import TradeVerticals from "@/pages/trade-verticals";
+import TradeHome from "@/pages/trade-home";
+import EstimatorApp from "@/pages/estimator-app";
+import TradeToolkit from "@/pages/trade-toolkit";
+import CodeHub from "@/pages/code-hub";
+import TradeWorksAI from "@/pages/tradeworks-ai";
+import FieldTool from "@/pages/field-tool";
+import EstimatorConfig from "@/pages/estimator-config";
+import CreditsDashboard from "@/pages/credits-dashboard";
+import CreditsSuccess from "@/pages/credits-success";
+import CreditsCancel from "@/pages/credits-cancel";
+import SubscriberDashboard from "@/pages/subscriber-dashboard";
+import InvestorDemo from "@/pages/investor-demo";
+import Partners from "@/pages/partners";
+import PrivacyPolicy from "@/pages/privacy-policy";
+import DataDeletion from "@/pages/data-deletion";
+import Terms from "@/pages/terms";
+import Contact from "@/pages/contact";
+import FAQ from "@/pages/faq";
+import Start from "@/pages/start";
+import Book from "@/pages/book";
+import AdminGuide from "@/pages/admin-guide";
+import TradeVerticalPage from "@/pages/trade-vertical";
+import Onboarding from "@/pages/onboarding";
+import OnboardingSuccess from "@/pages/onboarding-success";
+import PlatformPresentation from "@/pages/platform-presentation";
+import NPPPresentation from "@/pages/npp-presentation";
+import NPPWalkthrough from "@/pages/npp-walkthrough";
+import NPPEcosystemHome from "@/pages/npp-ecosystem-home";
+import GetStarted from "@/pages/get-started";
+import CommandCenter from "@/pages/command-center";
+import AffiliateDashboard from "@/pages/affiliate-dashboard";
+import MaddieTools from "@/pages/maddie-tools";
+import ReferralRedirect from "@/pages/referral-redirect";
+import { AIAgentTab } from "@/components/ui/ai-agent-tab";
+import { getTenantById } from "@/config/tenant";
+import { TenantProvider as TenantProviderBase } from "@/context/TenantContext";
+
+// Wrapper component for tenant-prefixed routes (e.g., /npp/*, /tlid/*)
+function TenantPrefixedRoute({ tenantId, Component }: { tenantId: string; Component: React.ComponentType }) {
+  const tenantConfig = getTenantById(tenantId);
+  return (
+    <TenantProviderBase tenant={tenantConfig}>
+      <Component />
+    </TenantProviderBase>
+  );
+}
+
+function ConditionalAIAgent() {
+  const [location] = useLocation();
+  
+  // Hide AI Agent on routes that already have their own AI agent
+  const hiddenRoutes = ['/app', '/admin', '/owner', '/crew-lead', '/marketing-hub', '/ops-ai', '/developer', '/tradeworks'];
+  const shouldHide = hiddenRoutes.some(route => location.startsWith(route));
+  
+  if (shouldHide) return null;
+  return <AIAgentTab />;
+}
+
+function AnalyticsTracker() {
+  useAnalytics();
+  return null;
+}
+
+function ScrollToTop() {
+  const [location] = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+  
+  return null;
+}
+
+function TenantHomeRedirect() {
+  const tenantId = getTenantIdFromHostname(window.location.hostname);
+  
+  if (tenantId === 'tradeworks' && window.location.pathname === '/') {
+    window.location.replace('/tradeworks');
+    return null;
+  }
+  
+  // Paint Pros Co (paintpros.io) shows the premium landing page
+  if (tenantId === 'paintprosco') {
+    return <HomeLume />;
+  }
+  
+  // Demo tenant shows the DemoViewer (lead gen hub)
+  if (tenantId === 'demo') {
+    return <DemoViewer />;
+  }
+  
+  const tradeVerticals = ['roofpros', 'hvacpros', 'electricpros', 'plumbpros', 'landscapepros', 'buildpros'];
+  const tradeMap: Record<string, string> = {
+    roofpros: 'roofing',
+    hvacpros: 'hvac',
+    electricpros: 'electrical',
+    plumbpros: 'plumbing',
+    landscapepros: 'landscaping',
+    buildpros: 'construction',
+  };
+  
+  if (tradeVerticals.includes(tenantId)) {
+    return <TradeVerticalPage tradeId={tradeMap[tenantId]} />;
+  }
+  
+  // NPP uses the ecosystem advertising landing page
+  if (tenantId === 'npp') {
+    return <NPPEcosystemHome />;
+  }
+  
+  // TLID.io uses TrustLayer home
+  if (tenantId === 'tlid') {
+    return <TrustLayerHome />;
+  }
+  
+  // Default to TrustLayer home for unknown tenants
+  return <TrustLayerHome />;
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/" component={TenantHomeRedirect} />
+      <Route path="/leads" component={DemoViewer} />
+      <Route path="/roofpros">{() => <TradeVerticalPage tradeId="roofing" />}</Route>
+      <Route path="/hvacpros">{() => <TradeVerticalPage tradeId="hvac" />}</Route>
+      <Route path="/electricpros">{() => <TradeVerticalPage tradeId="electrical" />}</Route>
+      <Route path="/plumbpros">{() => <TradeVerticalPage tradeId="plumbing" />}</Route>
+      <Route path="/landscapepros">{() => <TradeVerticalPage tradeId="landscaping" />}</Route>
+      <Route path="/buildpros">{() => <TradeVerticalPage tradeId="construction" />}</Route>
+      <Route path="/services" component={Services} />
+      <Route path="/portfolio" component={Portfolio} />
+      <Route path="/about" component={About} />
+      <Route path="/reviews" component={Reviews} />
+      <Route path="/estimate" component={Estimate} />
+      <Route path="/command-center" component={CommandCenter} />
+      <Route path="/admin" component={Admin} />
+      <Route path="/owner" component={Owner} />
+      <Route path="/estimator-config" component={EstimatorConfig} />
+      <Route path="/project-manager" component={ProjectManager} />
+      <Route path="/developer" component={Developer} />
+      <Route path="/verify/:hallmarkNumber" component={Verify} />
+      <Route path="/pay/:estimateId" component={Pay} />
+      <Route path="/proposal/:id/sign" component={ProposalSign} />
+      <Route path="/investors" component={Investors} />
+      <Route path="/investor-demo" component={InvestorDemo} />
+      <Route path="/partnership-proposal" component={PartnershipProposal} />
+      <Route path="/ip-agreement" component={IPAgreement} />
+      <Route path="/royalty-dashboard" component={RoyaltyDashboard} />
+      <Route path="/partner" component={PartnerDashboard} />
+      <Route path="/proposal-ryan" component={ProposalRyan} />
+      <Route path="/marketing" component={MarketingHub} />
+      <Route path="/marketing-hub" component={MarketingHub} />
+      <Route path="/marketing-old" component={Marketing} />
+      <Route path="/marketing-overview" component={MarketingOverview} />
+      <Route path="/install-marketing" component={InstallMarketingPWA} />
+      <Route path="/ops" component={OpsAI} />
+      <Route path="/tradeworks" component={TradeWorksApp} />
+      <Route path="/comparison" component={Why40kFails} />
+      <Route path="/compare" component={Compare} />
+      <Route path="/trade-verticals" component={TradeVerticals} />
+      <Route path="/trade-home" component={TradeHome} />
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/crew-lead" component={CrewLead} />
+      <Route path="/contractor-application" component={ContractorApplication} />
+      <Route path="/blog" component={Blog} />
+      <Route path="/terms" component={TermsWarranty} />
+      <Route path="/warranty" component={TermsWarranty} />
+      <Route path="/account" component={Account} />
+      <Route path="/help" component={Help} />
+      <Route path="/auth" component={AuthPage} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/awards" component={Awards} />
+      <Route path="/team" component={Team} />
+      <Route path="/colors" component={ColorLibrary} />
+      <Route path="/glossary" component={Glossary} />
+      <Route path="/color-library" component={ColorLibrary} />
+      <Route path="/resources" component={Resources} />
+      <Route path="/demo-viewer" component={DemoViewer} />
+      <Route path="/start-trial" component={TrialSignup} />
+      <Route path="/trial/:slug" component={TrialPortal} />
+      <Route path="/trial/:slug/upgrade" component={TrialUpgrade} />
+      <Route path="/trial/:slug/upgrade-success" component={TrialUpgradeSuccess} />
+      <Route path="/estimator-app" component={EstimatorApp} />
+      <Route path="/trade-toolkit" component={TradeToolkit} />
+      <Route path="/tradeworks" component={TradeWorksAI} />
+      <Route path="/credits" component={CreditsDashboard} />
+      <Route path="/credits/success" component={CreditsSuccess} />
+      <Route path="/credits/cancel" component={CreditsCancel} />
+      <Route path="/email-template" component={EmailTemplate} />
+      <Route path="/subscriber-dashboard" component={SubscriberDashboard} />
+      <Route path="/partners" component={Partners} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/data-deletion" component={DataDeletion} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/terms-of-service" component={Terms} />
+      <Route path="/contact" component={Contact} />
+      <Route path="/faq" component={FAQ} />
+      <Route path="/start" component={Start} />
+      <Route path="/book" component={Book} />
+      <Route path="/admin-guide" component={AdminGuide} />
+      <Route path="/onboarding" component={Onboarding} />
+      <Route path="/onboarding/success" component={OnboardingSuccess} />
+      <Route path="/onboarding/cancel">{() => <Onboarding />}</Route>
+      <Route path="/app" component={FieldTool} />
+      <Route path="/autopilot" component={MarketingAutopilot} />
+      <Route path="/autopilot/success" component={AutopilotSuccess} />
+      <Route path="/autopilot/admin" component={AutopilotAdmin} />
+      <Route path="/autopilot/portal" component={AutopilotPortal} />
+      <Route path="/autopilot/dashboard" component={AutopilotDashboard} />
+      <Route path="/autopilot/setup" component={AutopilotSetupGuide} />
+      <Route path="/autopilot/onboarding" component={AutopilotOnboarding} />
+      <Route path="/marketing-autopilot" component={MarketingAutopilot} />
+      <Route path="/presentation" component={PlatformPresentation} />
+      <Route path="/demo" component={PlatformPresentation} />
+      <Route path="/npp-demo" component={NPPPresentation} />
+      <Route path="/walkthrough" component={NPPWalkthrough} />
+      <Route path="/tour" component={NPPWalkthrough} />
+      <Route path="/get-started" component={GetStarted} />
+      <Route path="/start" component={GetStarted} />
+      <Route path="/affiliate" component={AffiliateDashboard} />
+      <Route path="/maddie" component={MaddieTools} />
+      <Route path="/ref/:hash" component={ReferralRedirect} />
+      <Route path="/tlid" component={TrustLayerHome} />
+      <Route path="/tlid/marketing-hub">{() => <TenantPrefixedRoute tenantId="tlid" Component={MarketingHub} />}</Route>
+      <Route path="/trustlayer" component={TrustLayerHome} />
+      <Route path="/trustlayer/marketing">{() => <TenantPrefixedRoute tenantId="tlid" Component={MarketingHub} />}</Route>
+      <Route path="/trustlayer/marketing-signup" component={TrustLayerMarketing} />
+      <Route path="/trustlayer/guardian" component={GuardianShield} />
+      <Route path="/trustlayer/claim" component={ClaimSubdomain} />
+      <Route path="/trustlayer/privacy" component={TrustLayerPrivacy} />
+      <Route path="/trustlayer/terms" component={TrustLayerTerms} />
+      
+      {/* NPP routes - explicit prefix for when accessed from other domains */}
+      <Route path="/npp">{() => <TenantPrefixedRoute tenantId="npp" Component={NPPEcosystemHome} />}</Route>
+      <Route path="/npp/services">{() => <TenantPrefixedRoute tenantId="npp" Component={Services} />}</Route>
+      <Route path="/npp/portfolio">{() => <TenantPrefixedRoute tenantId="npp" Component={Portfolio} />}</Route>
+      <Route path="/npp/about">{() => <TenantPrefixedRoute tenantId="npp" Component={About} />}</Route>
+      <Route path="/npp/reviews">{() => <TenantPrefixedRoute tenantId="npp" Component={Reviews} />}</Route>
+      <Route path="/npp/estimate">{() => <TenantPrefixedRoute tenantId="npp" Component={Estimate} />}</Route>
+      <Route path="/npp/app">{() => <TenantPrefixedRoute tenantId="npp" Component={FieldTool} />}</Route>
+      <Route path="/npp/marketing-hub">{() => <TenantPrefixedRoute tenantId="npp" Component={MarketingHub} />}</Route>
+      <Route path="/npp/blog">{() => <TenantPrefixedRoute tenantId="npp" Component={Blog} />}</Route>
+      <Route path="/npp/contact">{() => <TenantPrefixedRoute tenantId="npp" Component={Contact} />}</Route>
+      <Route path="/npp/book">{() => <TenantPrefixedRoute tenantId="npp" Component={Book} />}</Route>
+      <Route path="/npp/pricing">{() => <TenantPrefixedRoute tenantId="npp" Component={Pricing} />}</Route>
+      <Route path="/npp/colors">{() => <TenantPrefixedRoute tenantId="npp" Component={ColorLibrary} />}</Route>
+      <Route path="/npp/faq">{() => <TenantPrefixedRoute tenantId="npp" Component={FAQ} />}</Route>
+      <Route path="/npp/terms">{() => <TenantPrefixedRoute tenantId="npp" Component={TermsWarranty} />}</Route>
+      <Route path="/npp/warranty">{() => <TenantPrefixedRoute tenantId="npp" Component={TermsWarranty} />}</Route>
+      
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <TenantProvider>
+            <DemoProvider>
+              <AccessProvider>
+                <TooltipProvider>
+                  <DemoModeBanner />
+                  <ScrollToTop />
+                  <AnalyticsTracker />
+                  <Toaster />
+                  <Router />
+                  <ConditionalAIAgent />
+                </TooltipProvider>
+              </AccessProvider>
+            </DemoProvider>
+          </TenantProvider>
+        </QueryClientProvider>
+      </I18nProvider>
+    </ThemeProvider>
+  );
+}
+
+export default App;
