@@ -14,6 +14,9 @@ let authInitError: Error | null = null;
 
 const getOidcConfig = memoize(
   async () => {
+    if (!process.env.REPL_ID) {
+      throw new Error("OIDC authentication requires REPL_ID (Replit environment)");
+    }
     return await client.discovery(
       new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
       process.env.REPL_ID!
@@ -164,7 +167,7 @@ export function setupAuth(app: Express) {
       req.logout(() => {
         res.redirect(
           client.buildEndSessionUrl(config, {
-            client_id: process.env.REPL_ID!,
+            client_id: process.env.REPL_ID || 'unknown',
             post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
           }).href
         );

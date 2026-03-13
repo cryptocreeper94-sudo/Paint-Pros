@@ -2901,11 +2901,11 @@ Format the response as JSON with these fields:
   "suggestedTags": ["tag1", "tag2", "tag3"]
 }`;
 
-      const response = await fetch("https://modelfarm.replit.app/v1beta2/chat/completions", {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.REPLIT_AI_API_KEY || ""}`,
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY || ""}`,
         },
         body: JSON.stringify({
           model: "gpt-4o",
