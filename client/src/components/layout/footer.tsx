@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Facebook, Instagram, Linkedin, Shield, X, Sparkles, Calendar, Hash, ExternalLink, Users, Lock } from "lucide-react";
 import { SiX } from "react-icons/si";
 import { useTenant } from "@/context/TenantContext";
@@ -39,6 +39,19 @@ export function Footer() {
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState("");
+  const dwscClickRef = useRef({ count: 0, timer: null as any });
+  const handleDWSCClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dwscClickRef.current.count++;
+    if (dwscClickRef.current.count === 3) {
+      dwscClickRef.current.count = 0;
+      clearTimeout(dwscClickRef.current.timer);
+      window.open('https://dwsc.io/#portal', '_blank');
+    } else {
+      clearTimeout(dwscClickRef.current.timer);
+      dwscClickRef.current.timer = setTimeout(() => { dwscClickRef.current.count = 0; }, 800);
+    }
+  };
     
   const { data: releaseInfo } = useQuery<ReleaseInfo>({
     queryKey: ['/api/releases/latest', tenant.id],
@@ -114,17 +127,15 @@ export function Footer() {
             )}
             {/* Darkwave Smart Chain link for demo site */}
             {isDemo && (
-              <a 
-                href="https://dwsc.io" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-black hover:text-stone-600 transition-all hover:scale-105"
-                title="Powered by Darkwave Smart Chain"
+              <span
+                onClick={handleDWSCClick}
+                className="flex items-center gap-1 text-black hover:text-stone-600 transition-all hover:scale-105 cursor-default select-none"
+                title="◈ DWSC Dev Portal"
                 data-testid="link-dwsc"
               >
                 <ExternalLink className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                <span className="text-[8px] md:text-[9px] font-semibold hidden sm:inline">DWSC</span>
-              </a>
+                <span className="text-[8px] md:text-[9px] font-semibold hidden sm:inline">◈ DWSC</span>
+              </span>
             )}
           </div>
           
