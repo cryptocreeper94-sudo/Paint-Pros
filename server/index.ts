@@ -15,6 +15,7 @@ import { startNppPostingScheduler } from "./npp-posting-scheduler";
 import { startDarkWaveUnifiedScheduler } from "./darkwave-unified-scheduler";
 import { initAuthBackground } from "./replitAuth";
 import widgetRoutes from "./widgets/widget-routes";
+import { registerTrustLayerSSO } from "./trustLayerSSO";
 
 const app = express();
 const httpServer = createServer(app);
@@ -256,6 +257,9 @@ app.use((req, res, next) => {
 
 (async () => {
   await registerRoutes(httpServer, app);
+
+  // Trust Layer SSO — "Sign in with Trust Layer" consumer endpoints
+  registerTrustLayerSSO(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
