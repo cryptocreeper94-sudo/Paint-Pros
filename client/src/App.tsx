@@ -112,6 +112,7 @@ import ReferralRedirect from "@/pages/referral-redirect";
 import { AIAgentTab } from "@/components/ui/ai-agent-tab";
 import { getTenantById } from "@/config/tenant";
 import { TenantProvider as TenantProviderBase } from "@/context/TenantContext";
+import { FloatingThemeToggle } from "@/components/theme-toggle";
 
 // Wrapper component for tenant-prefixed routes (e.g., /npp/*, /tlid/*)
 function TenantPrefixedRoute({ tenantId, Component }: { tenantId: string; Component: React.ComponentType }) {
@@ -198,6 +199,7 @@ function TenantHomeRedirect() {
 function Router() {
   return (
     <Switch>
+      <FloatingThemeToggle />
       <Route path="/" component={TenantHomeRedirect} />
       <Route path="/leads" component={DemoViewer} />
       <Route path="/roofpros">{() => <TradeVerticalPage tradeId="roofing" />}</Route>

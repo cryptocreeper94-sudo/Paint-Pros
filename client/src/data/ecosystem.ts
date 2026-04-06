@@ -30,6 +30,8 @@ export type EcosystemCategory =
   | 'infrastructure' 
   | 'crypto' 
   | 'operations'
+  | 'education'
+  | 'publishing'
   | 'tenant';
 
 export interface EcosystemApp {
@@ -104,7 +106,7 @@ export const ecosystemApps: EcosystemApp[] = [
   },
   {
     name: 'TradeWorks AI',
-    desc: '8-Trade Field Toolkit & Estimator',
+    desc: 'The Professional Field Toolkit for Home Services',
     url: 'https://tradeworksai.io',
     image: ecosystemTradeWorks,
     status: 'Live - In Development',
@@ -157,8 +159,8 @@ export const ecosystemApps: EcosystemApp[] = [
     category: 'tenant'
   },
   {
-    name: 'YourLegacy.io',
-    desc: 'Chronicles Game',
+    name: 'Chronicles',
+    desc: 'Live Your Legacy',
     url: 'https://yourlegacy.io',
     image: ecosystemYourLegacy,
     status: 'Live - In Development',
@@ -166,8 +168,8 @@ export const ecosystemApps: EcosystemApp[] = [
     affiliateTag: 'npp-ref'
   },
   {
-    name: 'DarkWave Games',
-    desc: 'Arcade & Casino Games',
+    name: 'The Arcade',
+    desc: 'Provably Fair Gaming',
     url: 'https://darkwavegames.io',
     image: ecosystemDarkWaveGames,
     status: 'Live - In Development',
@@ -238,6 +240,24 @@ export const ecosystemApps: EcosystemApp[] = [
     category: 'trust-security',
     featured: true,
     affiliateTag: 'npp-ref'
+  },
+  {
+    name: 'Trust Layer Academy',
+    desc: 'Master Web3 & Digital Architecture',
+    url: 'https://academy.tlid.io',
+    image: ecosystemLume,
+    status: 'Live',
+    category: 'education',
+    affiliateTag: 'npp-ref'
+  },
+  {
+    name: 'Trust Book',
+    desc: 'Premium Publishing & Narration',
+    url: 'https://trustbook.tlid.io',
+    image: ecosystemLume,
+    status: 'Live',
+    category: 'publishing',
+    affiliateTag: 'npp-ref'
   }
 ];
 
@@ -251,6 +271,8 @@ export const categoryLabels: Record<EcosystemCategory, string> = {
   'infrastructure': 'Core Infrastructure',
   'crypto': 'Crypto & Trading',
   'operations': 'Operations & Logistics',
+  'education': 'Education & Academy',
+  'publishing': 'Publishing & Media',
   'tenant': 'Tenant Sites'
 };
 
