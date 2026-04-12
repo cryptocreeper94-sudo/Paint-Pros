@@ -36,7 +36,7 @@ export function serveStatic(app: Express) {
 
   // fall through to index.html if the file doesn't exist
   // Always serve with no-cache so browser checks for new version
-  app.use("/:path(*)", (_req, res) => {
+  app.use("/{*splat}", (_req, res) => {
     res.set({
       "Cache-Control": "no-cache, no-store, must-revalidate",
       "Pragma": "no-cache",
