@@ -1,5 +1,5 @@
-// Stripe webhook handlers using Replit managed connection
-// Reference: Replit Stripe Integration (connection:conn_stripe_01KDZTSZNJEGF1EJC4J71GANRV)
+// Stripe webhook handlers using managed connection
+// Reference: render Stripe Integration (connection:conn_stripe_01KDZTSZNJEGF1EJC4J71GANRV)
 
 import { getStripeSync } from './stripeClient';
 

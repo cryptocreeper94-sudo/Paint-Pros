@@ -145,7 +145,7 @@ export interface IStorage {
   // Tenant operations
   getTenant(id: string): Promise<Tenant | undefined>;
   
-  // User operations (for Replit Auth)
+  // User operations (for Trust Layer Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -851,7 +851,7 @@ export class DatabaseStorage implements IStorage {
     return tenant;
   }
   
-  // User operations (for Replit Auth)
+  // User operations (for Trust Layer Auth)
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;

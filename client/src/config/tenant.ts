@@ -1011,8 +1011,8 @@ export function getTenantIdFromHostname(hostname: string): string {
     }
   }
   
-  // Replit dev preview and unknown domains use "demo" (TLId.io / platform mode)
-  if (host.includes('replit.dev') || host.includes('picard.') || host.includes('repl.co')) {
+  // render dev preview and unknown domains use "demo" (TLId.io / platform mode)
+  if (host.includes('render.dev') || host.includes('picard.') || host.includes('repl.co')) {
     return import.meta.env.VITE_TENANT_ID || "demo";
   }
   

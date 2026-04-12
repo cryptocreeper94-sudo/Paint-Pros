@@ -7,7 +7,7 @@ import { FlipButton } from "@/components/ui/flip-button";
 import { CarouselView } from "@/components/ui/carousel-view";
 import { HeroSlideshow } from "@/components/ui/hero-slideshow";
 import { Award, LayoutGrid, Rows, Eye, TrendingUp } from "lucide-react";
-import awardImage from "@assets/Screenshot_20251216_195245_Replit_1765936399782.jpg";
+import awardImage from "@assets/Screenshot_20251216_195245_render_1765936399782.jpg";
 import portfolioImage from "@assets/generated_images/freshly_painted_home_interior.png";
 import { ArrowRight, Star, Brush, ShieldCheck, Clock, CheckCircle2, MapPin, BadgeCheck } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";

@@ -52,7 +52,7 @@ import {
   projectImages, insertProjectImageSchema,
   insertMarketingImageSchema, insertMarketingPostSchema
 } from "@shared/schema";
-import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { registerObjectStorageRoutes } from "./integrations/object_storage";
 import * as crypto from "crypto";
 import OpenAI from "openai";
 import { z } from "zod";
@@ -62,7 +62,7 @@ import { orbitEcosystem, PRICING_CATALOG } from "./orbit";
 import type { EcosystemLoginRequest, EcosystemRegisterRequest } from "./orbit";
 import * as hallmarkService from "./hallmarkService";
 import { sendContactEmail, sendLeadNotification, sendBookingNotification, sendContractorApplicationEmail, type ContactFormData, type LeadNotificationData, type BookingNotificationData, type ContractorApplicationData } from "./resend";
-import { setupAuth, isAuthenticated, initAuthBackground } from "./replitAuth";
+import { setupAuth, isAuthenticated, initAuthBackground } from "./auth";
 import type { RequestHandler } from "express";
 import { checkCredits, deductCreditsAfterUsage, getActionCost, CREDIT_PACKS } from "./aiCredits";
 import * as aiCredits from "./aiCredits";
@@ -239,8 +239,8 @@ function getTenantFromHostname(hostname: string): string {
     }
   }
 
-  // Replit dev preview URLs default to "demo" (TLId.io / platform mode with purple shield)
-  if (host.includes('replit.dev') || host.includes('picard.') || host.includes('repl.co')) {
+  // render dev preview URLs default to "demo" (TLId.io / platform mode with purple shield)
+  if (host.includes('render.dev') || host.includes('picard.') || host.includes('repl.co')) {
     const envTenant = process.env.DEFAULT_TENANT || process.env.VITE_TENANT_ID;
     if (envTenant && ['npp', 'lume', 'lumepaint', 'demo', 'orbit', 'tradeworks'].includes(envTenant.toLowerCase())) {
       return envTenant.toLowerCase();
@@ -540,7 +540,7 @@ export async function registerRoutes(
     res.json(users);
   });
 
-  // ============ REPLIT AUTH ============
+  // ============ Trust Layer Auth ============
   // Setup auth routes synchronously (OIDC discovery is deferred until first auth request)
   setupAuth(app);
 
@@ -612,7 +612,7 @@ export async function registerRoutes(
           { name: "StrikeAgent.io", url: "https://strikeagent.io", description: "StrikeAgent Platform" },
           { name: "DarkWavePulse.com", url: "https://darkwavepulse.com", description: "DarkWave Pulse" },
           { name: "BrewAndBoard.coffee", url: "https://brewandboard.coffee", description: "Brew & Board" },
-          { name: "Driver Connect", url: "https://driver-connect-hub.replit.app", description: "TrustLayer Driver Connect" }
+          { name: "Driver Connect", url: "https://driver-connect-hub.onrender.com", description: "TrustLayer Driver Connect" }
         ]
       },
       codeExample: {
@@ -5226,7 +5226,7 @@ Format the response as JSON with these fields:
         return;
       }
 
-      // Use Replit AI Integrations (no API key needed)
+      // Use AI Integrations (no API key needed)
       const openai = new OpenAI({
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
         apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -8679,7 +8679,7 @@ Do not include any text before or after the JSON.`
       }
 
       // Import object storage service
-      const { ObjectStorageService } = await import("./replit_integrations/object_storage/objectStorage");
+      const { ObjectStorageService } = await import("./integrations/object_storage/objectStorage");
       const objectStorageService = new ObjectStorageService();
 
       // Get presigned upload URL
@@ -9581,7 +9581,7 @@ Do not include any text before or after the JSON.`
       });
     }
 
-    // 3. Email (Resend) health check - uses Replit connector
+    // 3. Email (Resend) health check - uses service connector
     const emailStart = Date.now();
     try {
       const { getResendClient } = await import("./resend");
@@ -9993,7 +9993,7 @@ Do not include any text before or after the JSON.`
         lastSeen: Date;
       }>();
 
-      const botPatterns = /bot|crawler|spider|headless|preview|replit/i;
+      const botPatterns = /bot|crawler|spider|headless|preview|render/i;
 
       for (const view of recentViews) {
         const sessionId = view.sessionId || view.ipHash || `anon-${view.id}`;
@@ -11403,7 +11403,7 @@ IMPORTANT: NEVER use emojis in your responses - text only.`;
   });
 
   // ============ STRIPE PAYMENT ENDPOINTS ============
-  // Uses Replit managed Stripe connection
+  // Uses managed Stripe connection
 
   // POST /api/payments/stripe/create-checkout-session - Create Stripe checkout session
   app.post("/api/payments/stripe/create-checkout-session", async (req, res) => {

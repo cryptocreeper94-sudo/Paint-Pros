@@ -14,12 +14,12 @@ let authInitError: Error | null = null;
 
 const getOidcConfig = memoize(
   async () => {
-    if (!process.env.REPL_ID) {
-      throw new Error("OIDC authentication requires REPL_ID (Replit environment)");
+    if (!process.env.APP_ID) {
+      throw new Error("OIDC authentication requires APP_ID (production environment)");
     }
     return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
+      new URL(process.env.ISSUER_URL ?? "https://auth.trustlayer.io/oidc"),
+      process.env.APP_ID!
     );
   },
   { maxAge: 3600 * 1000 }
@@ -115,7 +115,7 @@ export function setupAuth(app: Express) {
 
   const ensureStrategy = async (domain: string) => {
     const config = await ensureOidcConfig();
-    const strategyName = `replitauth:${domain}`;
+    const strategyName = `trustlayerauth:${domain}`;
     if (!registeredStrategies.has(strategyName)) {
       const strategy = new Strategy(
         {
@@ -167,7 +167,7 @@ export function setupAuth(app: Express) {
       req.logout(() => {
         res.redirect(
           client.buildEndSessionUrl(config, {
-            client_id: process.env.REPL_ID || 'unknown',
+            client_id: process.env.APP_ID || 'unknown',
             post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
           }).href
         );

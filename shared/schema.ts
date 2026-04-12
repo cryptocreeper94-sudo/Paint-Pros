@@ -3,8 +3,8 @@ import { pgTable, text, varchar, timestamp, integer, boolean, decimal, jsonb, in
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table (for Replit Auth)
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// Session storage table (for OIDC Auth)
+// (IMPORTANT) This table is mandatory for OIDC Auth, don't drop it.
 export const sessions = pgTable(
   "sessions",
   {
@@ -15,12 +15,12 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table - supports both email/password and Replit Auth
+// User storage table - supports both email/password and OIDC Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
   passwordHash: text("password_hash"),
-  authProvider: text("auth_provider").default("email"), // 'email' or 'replit'
+  authProvider: text("auth_provider").default("email"), // 'email' or 'Render'
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   phone: text("phone"),
