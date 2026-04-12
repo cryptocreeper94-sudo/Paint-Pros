@@ -1,3 +1,6 @@
+process.on('unhandledRejection', (err) => { console.error('[FATAL] Unhandled rejection:', err); });
+process.on('uncaughtException', (err) => { console.error('[FATAL] Uncaught exception:', err); process.exit(1); });
+
 import express, { type Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
@@ -266,7 +269,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    console.error('[error]', err.stack || err.message);
   });
 
   // Serve attached_assets for external access (Meta, etc.) - both dev and prod
@@ -298,7 +301,6 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     async () => {
       log(`serving on port ${port}`);

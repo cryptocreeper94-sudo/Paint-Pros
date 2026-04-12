@@ -50,7 +50,7 @@ export function getSession() {
     tableName: "sessions",
   });
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: (process.env.SESSION_SECRET || require("crypto").randomBytes(32).toString("hex")),
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
