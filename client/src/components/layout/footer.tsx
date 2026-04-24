@@ -1,455 +1,92 @@
-import { useState, useRef } from "react";
-import { Facebook, Instagram, Linkedin, Shield, X, Sparkles, Calendar, Hash, ExternalLink, Users, Lock } from "lucide-react";
-import { SiX } from "react-icons/si";
-import { useTenant } from "@/context/TenantContext";
-import { useQuery } from "@tanstack/react-query";
-import { QRCodeSVG } from "qrcode.react";
-import { FOUNDING_ASSETS } from "@shared/schema";
-import { FooterWeatherWidget } from "@/components/FooterWeatherWidget";
-import { useLocation } from "wouter";
+import { useRef, useCallback } from "react";
+import { Link } from "wouter";
 
-interface ReleaseInfo {
-  version: string;
-  buildNumber: number;
-  hallmarkNumber: string;
-  solanaTxStatus: string;
-  solanaTxSignature?: string;
-  createdAt?: string;
-  hallmarkDetails?: {
-    blockchainTxSignature?: string;
-    blockchainExplorerUrl?: string;
-    metadata?: Record<string, any>;
-  };
-}
-
-const PIN_ROUTES: Record<string, { route: string; role: string }> = {
-  "1111": { route: "/owner", role: "Owner" },
-  "4444": { route: "/admin", role: "Admin" },
-  "0424": { route: "/developer", role: "Developer" },
-  "8888": { route: "/marketing-hub", role: "Marketing" },
-  "5555": { route: "/project-manager", role: "Project Manager" },
-  "7777": { route: "/crew-lead", role: "Crew Lead" },
-};
+const socialLinks = [
+  { name: "Twitter", url: "https://x.com/TrustSignal26", d: "M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" },
+  { name: "Discord", url: "https://discord.gg/PtkWpzE6", d: "M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" },
+  { name: "Telegram", url: "https://t.me/dwsccommunity", d: "M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" },
+  { name: "Facebook", url: "https://www.facebook.com/profile.php?id=61585553137979", d: "M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" },
+];
 
 export function Footer() {
-  const tenant = useTenant();
-  const [, setLocation] = useLocation();
-  const [showModal, setShowModal] = useState(false);
-  const [showVersionModal, setShowVersionModal] = useState(false);
-  const [showTeamModal, setShowTeamModal] = useState(false);
-  const [pin, setPin] = useState("");
-  const [pinError, setPinError] = useState("");
-  const dwscClickRef = useRef({ count: 0, timer: null as any });
-  const handleDWSCClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    dwscClickRef.current.count++;
-    if (dwscClickRef.current.count === 3) {
-      dwscClickRef.current.count = 0;
-      clearTimeout(dwscClickRef.current.timer);
-      window.open('https://dwsc.io/#portal', '_blank');
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleShieldClick = useCallback(() => {
+    clickCountRef.current += 1;
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    if (clickCountRef.current >= 3) {
+      clickCountRef.current = 0;
+      window.open("https://dwtl.io/developer-portal", "_blank");
     } else {
-      clearTimeout(dwscClickRef.current.timer);
-      dwscClickRef.current.timer = setTimeout(() => { dwscClickRef.current.count = 0; }, 800);
+      clickTimerRef.current = setTimeout(() => {
+        clickCountRef.current = 0;
+      }, 2000);
     }
-  };
-    
-  const { data: releaseInfo } = useQuery<ReleaseInfo>({
-    queryKey: ['/api/releases/latest', tenant.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/releases/latest?tenantId=${tenant.id}`);
-      if (!res.ok) throw new Error('Failed to fetch release');
-      return res.json();
-    },
-    staleTime: 60000,
-  });
-  
-  const version = releaseInfo?.version || "1.0.0";
-  const buildNumber = releaseInfo?.buildNumber || 0;
-  const isDemo = tenant.id === "demo";
-  const tenantAsset = isDemo ? FOUNDING_ASSETS.PAINTPROS_PLATFORM : FOUNDING_ASSETS.NPP_GENESIS;
-  const hallmarkNumber = releaseInfo?.hallmarkNumber || tenantAsset.number;
-  const displayHallmark = hallmarkNumber.replace('#', '');
-  
-  const verifyUrl = `${window.location.origin}/verify/${encodeURIComponent(hallmarkNumber)}`;
-  
+  }, []);
+
   return (
-    <>
-      <footer className="fixed bottom-0 left-0 right-0 z-30 bg-transparent border-t border-white/10 text-[10px] md:text-xs h-[40px] max-h-[40px] flex items-center">
-        <div className="w-full px-2 md:px-4 flex justify-around items-center">
-          
-          {/* Copyright */}
-          <div className="whitespace-nowrap text-[9px] md:text-[10px] text-black font-semibold">
-            <span className="hidden sm:inline">Powered by </span>
-            <a href="https://trustshield.tech" target="_blank" rel="noopener noreferrer" className="hover:text-purple-600 transition-colors">TrustShield.tech</a>
-            <span className="mx-1">|</span>
-            <a href="https://dwtl.io" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-600 transition-colors hidden sm:inline">DWTL</a>
-            <span className="hidden sm:inline mx-1">|</span>
-            <a href="https://tlid.io" target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 transition-colors hidden sm:inline">TLId</a>
-            <span className="ml-1">© 2026</span>
+    <footer className="relative z-10 border-t border-white/10 bg-[#070b16]" data-testid="footer">
+      {/* Site Links */}
+      <div className="border-b border-white/5">
+        <div className="max-w-5xl mx-auto px-4 py-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center md:text-left">
+            <div>
+              <h4 className="font-bold text-white/90 mb-4 text-xs uppercase tracking-wider">Platform</h4>
+              <ul className="space-y-2 text-xs text-white/40">
+                <li><Link href="/dashboard" className="hover:text-cyan-400 transition-colors">Dashboard</Link></li>
+                <li><Link href="/estimates" className="hover:text-cyan-400 transition-colors">Estimates</Link></li>
+                <li><Link href="/projects" className="hover:text-cyan-400 transition-colors">Projects</Link></li>
+                <li><Link href="/pricing" className="hover:text-cyan-400 transition-colors">Pricing</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-white/90 mb-4 text-xs uppercase tracking-wider">Ecosystem</h4>
+              <ul className="space-y-2 text-xs text-white/40">
+                <li><a href="https://dwtl.io" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">Trust Layer</a></li>
+                <li><a href="https://darkwavestudios.io" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">DarkWave Studios</a></li>
+                <li><a href="https://trustshield.tech" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">TrustShield</a></li>
+                <li><a href="https://garagebot.app" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">GarageBot</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-white/90 mb-4 text-xs uppercase tracking-wider">Resources</h4>
+              <ul className="space-y-2 text-xs text-white/40">
+                <li><Link href="/help" className="hover:text-cyan-400 transition-colors">Help</Link></li>
+                <li><Link href="/terms" className="hover:text-cyan-400 transition-colors">Terms</Link></li>
+                <li><Link href="/privacy" className="hover:text-cyan-400 transition-colors">Privacy</Link></li>
+                <li><Link href="/contact" className="hover:text-cyan-400 transition-colors">Contact</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-white/90 mb-4 text-xs uppercase tracking-wider">Community</h4>
+              <ul className="space-y-2 text-xs text-white/40">
+
+              </ul>
+            </div>
           </div>
-          
-          {/* Hallmark Badge */}
+        </div>
+      </div>
+
+      {/* Bottom Bar */}
+      <div className="max-w-5xl mx-auto px-4 py-4">
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-white/40">
+          <span className="text-white/60">DarkWave Studios, LLC</span>
+          <span className="text-white/20">•</span>
+          <span>&copy; 2026</span>
+          <span className="text-white/20">•</span>
+          <a href="https://dwtl.io" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">Trust Layer</a>
+          <span className="text-white/20">•</span>
           <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-1 transition-all hover:scale-110 group"
-            data-testid="button-hallmark-badge"
+            onClick={handleShieldClick}
+            className="text-white/10 hover:text-white/20 transition-colors"
+            data-testid="shield-easter-egg"
+            aria-label="Shield"
           >
-            <Shield className="w-3.5 h-3.5 md:w-4 md:h-4 text-black group-hover:text-stone-600" />
-            <span className="hidden md:inline text-black font-semibold font-mono text-[9px] group-hover:text-stone-600">
-              {displayHallmark}
-            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </button>
-
-          {/* Weather Widget */}
-          <FooterWeatherWidget />
-
-          {/* Socials - Show configured links or placeholders */}
-          <div className="flex gap-2 md:gap-3 items-center">
-            {tenant.social?.instagram ? (
-              <a href={tenant.social.instagram} target="_blank" rel="noopener noreferrer" className="transition-all hover:scale-110" data-testid="link-instagram"><Instagram className="w-3.5 h-3.5 md:w-4 md:h-4 text-black hover:text-stone-600" /></a>
-            ) : (
-              <a href="#" className="transition-all hover:scale-110" data-testid="link-instagram-placeholder"><Instagram className="w-3.5 h-3.5 md:w-4 md:h-4 text-black hover:text-stone-600" /></a>
-            )}
-            {tenant.social?.facebook ? (
-              <a href={tenant.social.facebook} target="_blank" rel="noopener noreferrer" className="transition-all hover:scale-110" data-testid="link-facebook"><Facebook className="w-3.5 h-3.5 md:w-4 md:h-4 text-black hover:text-stone-600" /></a>
-            ) : (
-              <a href="#" className="transition-all hover:scale-110" data-testid="link-facebook-placeholder"><Facebook className="w-3.5 h-3.5 md:w-4 md:h-4 text-black hover:text-stone-600" /></a>
-            )}
-            {tenant.social?.linkedin ? (
-              <a href={tenant.social.linkedin} target="_blank" rel="noopener noreferrer" className="transition-all hover:scale-110" data-testid="link-linkedin"><Linkedin className="w-3.5 h-3.5 md:w-4 md:h-4 text-black hover:text-stone-600" /></a>
-            ) : (
-              <a href="#" className="transition-all hover:scale-110" data-testid="link-linkedin-placeholder"><Linkedin className="w-3.5 h-3.5 md:w-4 md:h-4 text-black hover:text-stone-600" /></a>
-            )}
-            {tenant.social?.twitter ? (
-              <a href={tenant.social.twitter} target="_blank" rel="noopener noreferrer" className="transition-all hover:scale-110" data-testid="link-twitter"><SiX className="w-3 h-3 md:w-3.5 md:h-3.5 text-black hover:text-stone-600" /></a>
-            ) : (
-              <a href="#" className="transition-all hover:scale-110" data-testid="link-twitter-placeholder"><SiX className="w-3 h-3 md:w-3.5 md:h-3.5 text-black hover:text-stone-600" /></a>
-            )}
-            {/* Darkwave Smart Chain link for demo site */}
-            {isDemo && (
-              <span
-                onClick={handleDWSCClick}
-                className="flex items-center gap-1 text-black hover:text-stone-600 transition-all hover:scale-105 cursor-default select-none"
-                title="◈ DWSC Dev Portal"
-                data-testid="link-dwsc"
-              >
-                <ExternalLink className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                <span className="text-[8px] md:text-[9px] font-semibold hidden sm:inline">◈ DWSC</span>
-              </span>
-            )}
-          </div>
-          
-          {/* Team Login Button */}
-          <button
-            onClick={() => {
-              setShowTeamModal(true);
-              setPin("");
-              setPinError("");
-            }}
-            className="text-[9px] md:text-[10px] text-black font-semibold hover:text-stone-600 transition-colors"
-            data-testid="button-team-login"
-          >
-            Team
-          </button>
-          
-          {/* Legal Links */}
-          <a href="/terms" className="text-[9px] md:text-[10px] text-black font-semibold hover:text-stone-600 transition-colors" data-testid="link-legal">
-            Legal
-          </a>
-          
-          {/* Investors - Demo only */}
-          {isDemo && (
-            <a href="/investors" className="text-[9px] md:text-[10px] text-black font-semibold hover:text-stone-600 transition-colors" data-testid="link-investors">Investors</a>
-          )}
-
-          
         </div>
-      </footer>
-
-      
-      {/* Hallmark Verification Modal */}
-      {showModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          style={{ paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)', paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 16px)' }}
-          onClick={() => setShowModal(false)}
-        >
-          <div 
-            className="bg-white border border-amber-200 rounded-2xl p-5 max-w-sm w-full shadow-2xl max-h-full overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-amber-600" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {isDemo ? "Dual Chain Verified" : "TrustLayer"}
-                </h3>
-              </div>
-              <button 
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                data-testid="button-close-hallmark-modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {/* First in Industry Badge */}
-              <div className="bg-gradient-to-r from-purple-100 to-sky-100 border border-sky-300 rounded-lg p-3 text-center">
-                <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider">
-                  {isDemo ? "Dual Chain Verified" : "Verified Member"}
-                </span>
-                <p className="text-sm font-semibold text-gray-900 mt-0.5">
-                  {isDemo 
-                    ? <><span className="text-purple-600">Solana</span> + <span className="text-sky-600">Darkwave</span> Verified</>
-                    : <><span className="text-sky-600">TrustLayer</span> Verified Member</>
-                  }
-                </p>
-              </div>
-              {/* QR Code */}
-              <div className="flex justify-center p-4 bg-white rounded-xl">
-                <QRCodeSVG 
-                  value={verifyUrl}
-                  size={150}
-                  level="H"
-                  includeMargin={false}
-                />
-              </div>
-              
-              {/* Hallmark Info */}
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Hallmark ID:</span>
-                  <span className="font-mono text-amber-600">{displayHallmark}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Version:</span>
-                  <span className="font-mono text-gray-900">v{version}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Build:</span>
-                  <span className="font-mono text-gray-900">#{buildNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Status:</span>
-                  <span className={`font-medium ${
-                    releaseInfo?.solanaTxStatus === 'confirmed' 
-                      ? 'text-blue-600' 
-                      : releaseInfo?.solanaTxStatus === 'genesis'
-                        ? 'text-amber-600'
-                        : 'text-gray-500'
-                  }`}>
-                    {releaseInfo?.solanaTxStatus === 'confirmed' 
-                      ? '✓ Blockchain Verified' 
-                      : releaseInfo?.solanaTxStatus === 'genesis'
-                        ? '★ Genesis Platform'
-                        : 'Pending'}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Verification Link */}
-              <a 
-                href={verifyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-medium rounded-lg text-center hover:from-amber-400 hover:to-yellow-400 transition-all"
-                data-testid="link-verify-hallmark"
-              >
-                Verify Authenticity
-              </a>
-              
-              {/* Powered by */}
-              <p className="text-center text-[10px] text-gray-500">
-                {isDemo ? "Powered by ORBIT • Dual Chain Verified" : "Powered by TrustLayer"}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Version Info Modal */}
-      {showVersionModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          style={{ paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)', paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 16px)' }}
-          onClick={() => setShowVersionModal(false)}
-        >
-          <div 
-            className="bg-gradient-to-br from-[#2a2f1f] to-[#1a1d14] border border-amber-500/30 rounded-2xl p-5 max-w-md w-full shadow-2xl max-h-full overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-400" />
-                <h3 className="text-lg font-semibold text-white">Version {version}</h3>
-              </div>
-              <button 
-                onClick={() => setShowVersionModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-                data-testid="button-close-version-modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {/* Version Details */}
-              <div className="bg-black/30 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Hash className="w-4 h-4 text-amber-400" />
-                  <span className="text-gray-400">Build:</span>
-                  <span className="font-mono text-white">#{buildNumber}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="w-4 h-4 text-amber-400" />
-                  <span className="text-gray-400">Released:</span>
-                  <span className="text-white">
-                    {releaseInfo?.createdAt 
-                      ? new Date(releaseInfo.createdAt).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })
-                      : 'Genesis Release'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Shield className="w-4 h-4 text-amber-400" />
-                  <span className="text-gray-400">Status:</span>
-                  <span className={`font-medium ${
-                    releaseInfo?.solanaTxStatus === 'confirmed' 
-                      ? 'text-blue-400' 
-                      : 'text-amber-400'
-                  }`}>
-                    {releaseInfo?.solanaTxStatus === 'confirmed' 
-                      ? '✓ Blockchain Verified' 
-                      : '★ Verified Platform'}
-                  </span>
-                </div>
-              </div>
-
-              {/* What's New */}
-              <div>
-                <h4 className="text-sm font-medium text-amber-400 mb-2">What's New in v{version}</h4>
-                <ul className="space-y-2 text-sm text-gray-300">
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">•</span>
-                    <span>Automatic version stamping on deploy</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">•</span>
-                    <span>Improved mobile layout with compact grid</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">•</span>
-                    <span>Enhanced estimator with photo uploads</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">•</span>
-                    <span>Solana blockchain verification</span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Blockchain Link */}
-              {releaseInfo?.solanaTxSignature && (
-                <a 
-                  href={`https://explorer.solana.com/tx/${releaseInfo.solanaTxSignature}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white font-medium rounded-lg text-center hover:from-purple-400 hover:to-fuchsia-400 transition-all"
-                  data-testid="link-blockchain-tx"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  View on Solana Explorer
-                </a>
-              )}
-              
-              {/* Powered by */}
-              <p className="text-center text-[10px] text-gray-500">
-                Paint Pros by ORBIT • Verified Software
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Team Login Modal */}
-      {showTeamModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          style={{ paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)', paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 16px)' }}
-          onClick={() => setShowTeamModal(false)}
-        >
-          <div 
-            className="bg-white border border-amber-200 rounded-2xl p-5 max-w-xs w-full shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-2">
-                <Lock className="w-5 h-5 text-amber-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Team Login</h3>
-              </div>
-              <button 
-                onClick={() => setShowTeamModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                data-testid="button-close-team-modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault();
-                const route = PIN_ROUTES[pin];
-                if (route) {
-                  setShowTeamModal(false);
-                  setLocation(route.route);
-                } else {
-                  setPinError("Invalid PIN");
-                }
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Enter your PIN</label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={pin}
-                  onChange={(e) => {
-                    setPin(e.target.value);
-                    setPinError("");
-                  }}
-                  placeholder="Enter PIN"
-                  className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  autoFocus
-                  data-testid="input-team-pin"
-                />
-                {pinError && (
-                  <p className="text-red-500 text-sm mt-1 text-center">{pinError}</p>
-                )}
-              </div>
-              
-              <button
-                type="submit"
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-medium rounded-lg text-center hover:from-amber-400 hover:to-yellow-400 transition-all"
-                data-testid="button-submit-team-pin"
-              >
-                Login
-              </button>
-              
-              <p className="text-center text-[10px] text-gray-500">
-                Owner • Admin • Developer • Marketing • PM
-              </p>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
+      </div>
+    </footer>
   );
 }
